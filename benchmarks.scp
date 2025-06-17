@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# Job Name and Files (also --job-name)
+#SBATCH -J heat
+#Output and error (also --output, --error):
+#SBATCH -o job.out
+#SBATCH -e job.out
+# Wall clock limit:
+#SBATCH --time=00:03:00
+#SBATCH --account=h039v
+#SBATCH --partition=test
+
+logfile="perf_all_compute_node_blocked.log"
+rm -f "$logfile"
+
+for i in {1..5}; do
+echo "Durchlauf $i" >> "$logfile"
+{ time ./heat jacobi.dat; time ./heat gauss_seidel.dat;} 2>>"$logfile" >>"$logfile"
+done
+
+printf '\n%.0s' {1..6} >> "$logfile"
+        
+
