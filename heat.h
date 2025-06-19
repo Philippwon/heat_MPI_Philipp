@@ -44,6 +44,7 @@ algoparam_t;
 
 // misc.c
 int initialize( algoparam_t *param );
+int initialize_MPI( algoparam_t *param, int width, int height, double x_stepsize, double y_stepsize, int x_coord, int y_coord, int count_node_width, int count_node_height, int node_pixel_width, int node_pixel_height);
 int finalize( algoparam_t *param );
 void write_image( FILE * f, double *u,
 		  unsigned sizex, unsigned sizey );
