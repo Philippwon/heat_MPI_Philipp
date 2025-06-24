@@ -127,33 +127,30 @@ int main(int argc, char *argv[]) {
 	int normal_width_pixels = param.act_res / width;
 
 
+
+	int visres_y_pixels = pos_y == height - 1 ? (param.visres+2) - pos_y * ((param.visres+2) / height) : ((param.visres+2) / height);
+	int visres_x_pixels = pos_x == width - 1 ? (param.visres+2) - pos_x * ((param.visres+2) / width) : ((param.visres+2) / width);
+
+
 	// loop over different resolutions
 	while (1) {
 
-		// free allocated memory of previous experiment
-		// if (param.u != 0)
-		// 	finalize(&param);
-
-		// if (!initialize(&param)) {
-		// 	fprintf(stderr, "Error in Jacobi initialization.\n\n");
-
-		// 	usage(argv[0]);
-		// }
-		// fprintf(stderr, "Resolution: %5u\r", param.act_res);
-
-
-		// node height and node width refer to the number of nodes used to distribute the work e.g 3x5 nodes refers to 3 lines of 5 nodes
-		// x and y_coord refer to the position of the current node inside this grid starting from (0,0) in the top left corner up to (h-1,w-1) in bottom right corner
-		// node_pixel_width/width refer to the width/height of all but the last node in a line/column. it is used to calculate the exakt ccordinates e.g: (0.784,0.342) of the upper left corner of a nodes grid
-		// int initialize_MPI( algoparam_t *param, int width, int height, double x_stepsize, double y_stepsize, int x_coord, int y_coord, int count_node_width, int count_node_height, int node_pixel_width, int node_pixel_height)
+		if(experiment >= 1)
+			fprintf(stderr, "\n process %d kommt nach erstem exp hier her\n",rank);
 
 		if (param.u != 0)
 			finalize(&param);
 
-		if (!initialize_MPI(&param, width_pixels, height_pixels, x_stepsize, y_stepsize, pos_x, pos_y, width, height, normal_width_pixels, normal_height_pixels)) {
+		if(experiment >= 1)
+			fprintf(stderr, "\n process %d überlebt nach erstem exp das finalize\n",rank);
+
+		if (!initialize_MPI(&param, width_pixels, height_pixels, x_stepsize, y_stepsize, pos_x, pos_y, width, height, normal_width_pixels, normal_height_pixels, visres_x_pixels, visres_y_pixels)) {
 			fprintf(stderr, "Error in Jacobi initialization for process: %d.\n\n", rank);
 			usage(argv[0]);
 		}
+
+		if(experiment >= 1)
+			fprintf(stderr, "\n process %d überlebt nach erstem exp das neue initialize\n",rank);
 
 		fprintf(stderr, "process: %d height, width : (%d,%d)   coordinates (y,x) (%d,%d) \n", rank, height_pixels, width_pixels, pos_y, pos_x);
 
@@ -199,7 +196,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "HUUHUHUHUH 2");
 
 		while (1) {
-			fprintf(stderr, "Process: %d   iteration:%d\n",rank, iter);
+			fprintf(stderr, "Process: %d  	ressize: %d	  	iteration:%d\n",rank, param.act_res, iter);
 
 			switch (param.algorithm) {
 
@@ -352,6 +349,7 @@ int main(int argc, char *argv[]) {
 		// stopping time
 		runtime = wtime() - runtime;
 
+		fprintf(stderr, "\ncalled by process %d\n", rank);
 		fprintf(stderr, "Resolution: %5u, ", param.act_res);
 		fprintf(stderr, "Time: %04.3f ", runtime);
 		fprintf(stderr, "(%3.3f GFlop => %6.2f MFlop/s, ", flop / 1000000000.0, flop / runtime / 1000000);
@@ -363,13 +361,16 @@ int main(int argc, char *argv[]) {
 		resolution[experiment]=param.act_res;
 		experiment++;
 
+		fprintf(stderr, "\nprocess %d kommt noch hier her: \n", rank);
+
 		if (param.act_res + param.res_step_size > param.max_res)
 			break;
 		param.act_res += param.res_step_size;
 		
+		fprintf(stderr, "\nprocess %d kommt noch wirklich noch hier her: \n", rank);
 	}
 
-
+	fprintf(stderr,"process %d kommt noch raus",rank);
 
 
 
@@ -381,12 +382,28 @@ int main(int argc, char *argv[]) {
 
 	}
 
-	// coarsen(param.u, np, np, param.uvis, param.visres + 2, param.visres + 2);
 
-	write_image(resfile, param.uvis, param.visres + 2, param.visres + 2);
+
+
+
+
+	// coarsen(param.u, np, np, param.uvis, param.visres + 2, param.visres + 2);
+	coarsen(param.u, width_pixels+2, height_pixels+2, param.uvis, visres_x_pixels, visres_y_pixels);
+
+
+
+
+
+	int x_start = pos_x * ((param.visres+2) / width);
+	int y_start = pos_y * ((param.visres+2) / height);
+
+	// write_image(resfile, param.uvis, param.visres + 2, param.visres + 2);
+	// write_image_MPI(resfile, param.uvis, visres_x_pixels, visres_y_pixels, param.visres+2, x_start, y_start);
+
+	write_image_MPI(resfile, param.uvis, visres_x_pixels, visres_y_pixels, param.visres+2, param.visres+2, x_start, y_start);
 
 	finalize(&param);
-	MPI_Finalize ();
+	MPI_Finalize();
 
 	return 0;
 }
